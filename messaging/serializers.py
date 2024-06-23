@@ -31,11 +31,17 @@ class ConversationListSerializer(serializers.ModelSerializer):
     
 class ConversationSerializer(serializers.ModelSerializer):
     participants = ConversationParticipantSerializer(source='participant_set' ,many=True)
-    messages = MessageSerializer(many=True)
+    last_50_messages = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
-        fields = ['id', 'name', 'participants', 'messages', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'participants', 'last_50_messages', 'created_at', 'updated_at']
+
+    def get_last_50_messages(self, obj):
+        messages = obj.messages.all().order_by('-created_at')[:50]
+        if messages:
+            return MessageSerializer(messages, many=True).data
+        return None
 
 class AddParticipantSerializer(serializers.Serializer):
     username = serializers.CharField()

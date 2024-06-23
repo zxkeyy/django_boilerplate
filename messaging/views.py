@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework import viewsets, permissions, serializers
+from rest_framework import viewsets, permissions, serializers, pagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .permissions import IsConversationAdminOrReadOnly
@@ -24,6 +24,16 @@ class ConversationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         conversation = serializer.save()
         ConversationParticipant.objects.create(conversation=conversation, user=self.request.user, is_admin=True)
+
+    @action(detail=True, methods=['get'], url_path='messages', permission_classes=[permissions.IsAuthenticated])
+    def messages(self, request, *args, **kwargs):
+        queryset = self.get_object().messages.all()
+        serializer_class = MessageSerializer
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(serializer_class(page, many=True).data)
+        return Response(serializer_class(queryset, many=True).data)
+
 
     @action(detail=True, methods=['post'], serializer_class=AddParticipantSerializer, permission_classes=[permissions.IsAuthenticated, IsConversationAdminOrReadOnly])
     def add_participant(self, request, pk=None):
@@ -75,6 +85,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
 
+    # Custom action to delete a message
     @action(detail=True, methods=['post'], serializer_class=serializers.Serializer, permission_classes=[permissions.IsAuthenticated])
     def delete_message(self, request, pk=None):
         message = self.get_object()
