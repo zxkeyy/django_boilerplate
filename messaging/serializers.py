@@ -6,7 +6,7 @@ from .models import Conversation, ConversationParticipant, Message
 class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'content', 'attachment', 'is_deleted', 'created_at', 'updated_at']
+        fields = ['id','conversation', 'sender', 'content', 'attachment', 'is_deleted', 'created_at', 'updated_at']
 
 class ConversationParticipantSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username')
@@ -16,12 +16,12 @@ class ConversationParticipantSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'is_admin']
 
 class ConversationListSerializer(serializers.ModelSerializer):
-    participants = ConversationParticipantSerializer(many=True)
+    participant_set = ConversationParticipantSerializer(many=True)
     last_message = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
-        fields = ['id', 'name', 'participants', 'last_message', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'participant_set', 'last_message', 'created_at', 'updated_at']
 
     def get_last_message(self, obj):
         last_message = obj.messages.first()
