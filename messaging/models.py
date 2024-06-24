@@ -30,7 +30,7 @@ class Message(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='messages')
     content = models.TextField(max_length=512, blank=True)
-    attachment = models.FileField(blank=True, null=True)
+    attachment = models.FileField(upload_to='attachments',blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
