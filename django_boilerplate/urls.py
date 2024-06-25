@@ -27,4 +27,5 @@ urlpatterns = [
     path('auth/', include('djoser.social.urls')),
     path('profiles/', include('profiles.urls')),
     path('messaging/', include('messaging.urls')),
+    path('ecommerce/', include('ecommerce.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
