@@ -11,8 +11,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
     permission_classes = [IsOwnerOrReadOnly|permissions.IsAdminUser]
-    lookup_field = 'user__username'
-
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
     filterset_class = ProfileFilter
+    lookup_field = 'user__username'
     search_fields = ['user__username']
