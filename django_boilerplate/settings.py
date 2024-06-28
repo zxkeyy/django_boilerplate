@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'social_django',
     'channels',
     #
+    'core',
     'users',
     'profiles',
     'messaging',
