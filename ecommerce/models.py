@@ -50,10 +50,9 @@ class ProductInventory(models.Model):
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='orders')
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    status = models.CharField(max_length=100, default='pending', choices=[('pending', 'Pending'), ('completed', 'Completed'), ('canceled', 'Canceled')])
+    status = models.CharField(max_length=100, default='pending', choices=[('pending', 'Pending'),('paid', 'Paid'), ('completed', 'Completed'), ('canceled', 'Canceled')])
     shipping_address = models.ForeignKey('core.Address', on_delete=models.PROTECT, related_name='shipping_address', null=True, blank=True)
     billing_address = models.ForeignKey('core.Address', on_delete=models.PROTECT, related_name='billing_address', null=True, blank=True)
-    payment = models.ForeignKey('Payment', on_delete=models.PROTECT, related_name='orders', null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -72,15 +71,3 @@ class OrderItem(models.Model):
     
     def __str__(self):
         return f"{self.product.name} - {self.quantity} items"
-
-class Payment(models.Model):
-    payment_method = models.CharField(max_length=100, choices=[('card', 'Card'), ('paypal', 'PayPal')])
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_id = models.CharField(max_length=100)
-    status = models.CharField(max_length=100, default='pending', choices=[('pending', 'Pending'), ('completed', 'Completed'), ('failed', 'Failed')])
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"Payment for Order {self.order.id} - {self.amount} {self.status}"

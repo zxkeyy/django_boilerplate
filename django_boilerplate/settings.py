@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'users',
     'profiles',
     'messaging',
+    'payments',
     'ecommerce',
 ]
 
@@ -221,3 +222,7 @@ CHANNEL_LAYERS = {
 ALLOWED_HOSTS = ["*"]
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+#
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
