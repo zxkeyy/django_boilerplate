@@ -3,9 +3,10 @@ from django.db import models
 
 # Create your models here.
 class StripePayment(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='stripe_payments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='stripe_payments')
     stripe_charge_id = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    order = models.ForeignKey('ecommerce.Order', on_delete=models.PROTECT, related_name='stripe_payments')
     
     timestamp = models.DateTimeField(auto_now_add=True)
     

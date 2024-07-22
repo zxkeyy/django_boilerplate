@@ -50,7 +50,7 @@ class ProductInventory(models.Model):
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='orders')
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    status = models.CharField(max_length=100, default='pending', choices=[('pending', 'Pending'),('paid', 'Paid'), ('completed', 'Completed'), ('canceled', 'Canceled')])
+    status = models.CharField(max_length=100, default='checkout', choices=[('checkout', 'Checkout'),('pending', 'Pending'), ('completed', 'Completed'), ('canceled', 'Canceled')])
     shipping_address = models.ForeignKey('core.Address', on_delete=models.PROTECT, related_name='shipping_address', null=True, blank=True)
     billing_address = models.ForeignKey('core.Address', on_delete=models.PROTECT, related_name='billing_address', null=True, blank=True)
     
