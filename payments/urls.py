@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import CreateCheckoutSessionView, StripeConfigView, StripeWebhookView
+from .views import CreateCheckoutSessionView, StripeConfigView, StripeWebhookView, StripePaymentViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
 
+router.register('stripe/payments', StripePaymentViewSet)
 router.register('stripe/config', StripeConfigView, basename='stripe-config')
 router.register('stripe/create-checkout-session', CreateCheckoutSessionView, basename='stripe-create-checkout-session')
 router.register('stripe/webhook', StripeWebhookView, basename='stripe-webhook')

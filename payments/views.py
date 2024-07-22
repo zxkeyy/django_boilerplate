@@ -10,8 +10,14 @@ import stripe
 from django_boilerplate.settings import AUTH_USER_MODEL
 from ecommerce.models import Order, Product
 from ecommerce.serializers import OrderSerializer
-from payments.models import StripePayment
-from payments.serializers import CreateCheckoutSessionSerializer
+from .models import StripePayment
+from .serializers import CreateCheckoutSessionSerializer, StripePaymentSerializer
+
+class StripePaymentViewSet(viewsets.ModelViewSet):
+    queryset = StripePayment.objects.all()
+    serializer_class = StripePaymentSerializer
+    permission_classes = [permissions.IsAdminUser]
+    http_method_names = ['get']
 
 class StripeConfigView(viewsets.ViewSet):
     permission_classes = []
