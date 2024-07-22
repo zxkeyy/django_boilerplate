@@ -1,13 +1,16 @@
 from django.conf import settings
 from django.http import JsonResponse
+from django.contrib.auth import get_user_model
 from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.views.decorators.csrf import csrf_exempt
 import stripe
 
+from django_boilerplate.settings import AUTH_USER_MODEL
 from ecommerce.models import Order, Product
 from ecommerce.serializers import OrderSerializer
+from payments.models import StripePayment
 from payments.serializers import CreateCheckoutSessionSerializer
 
 class StripeConfigView(viewsets.ViewSet):
@@ -57,8 +60,51 @@ class CreateCheckoutSessionView(viewsets.ViewSet):
                 cancel_url=domain_url + '/cancel/',
                 payment_method_types=['card'],
                 mode='payment',
+                metadata={'order_id': order.id, 'user_id': request.user.id},
                 line_items=line_items
             )
             return Response({'sessionId': checkout_session['id']})
         except Exception as e:
             return Response({'error': str(e)})
+        
+class StripeWebhookView(viewsets.ViewSet):
+    permission_classes = []
+    
+    @csrf_exempt
+    def create(self, request):
+        endpoint_secret = settings.STRIPE_ENDPOINT_SECRET
+        payload = request.body
+        sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+        event = None
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        except ValueError as e:
+            # Invalid payload
+            return Response(status=400)
+        except stripe.error.SignatureVerificationError as e:
+            # Invalid signature
+            return Response(status=400)
+
+        # Handle the event
+        if event['type'] == 'checkout.session.completed':
+            try:
+                session = event['data']['object']
+                user = session['metadata']['user_id']
+                order_id = session['metadata']['order_id']
+                stripePayment = StripePayment.objects.create(
+                    user= get_user_model().objects.get(id=user),
+                    stripe_charge_id=session['payment_intent'],
+                    amount=session['amount_total'] / 100,
+                    order_id=order_id
+                )
+                stripePayment.save()
+                order = Order.objects.get(id=order_id)
+                order.status = 'pending'
+                order.save()
+            except Exception as e:
+                print(str(e))
+                return Response(status=400)
+        return Response(status=200)
