@@ -4,8 +4,10 @@ from payments.models import ChargilyPayment, StripePayment
 
 class CreateCheckoutSessionSerializer(serializers.Serializer):
     order_id = serializers.IntegerField()
+    success_url = serializers.CharField()
+    cancel_url = serializers.CharField()
     class Meta:
-        fields = ['order_id']
+        fields = ['order_id', 'success_url', 'cancel_url']
 
 class StripePaymentSerializer(serializers.ModelSerializer):
     class Meta:

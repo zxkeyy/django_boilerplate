@@ -38,6 +38,8 @@ class CreateStripeCheckoutSessionView(viewsets.ViewSet):
 
     def create(self, request):
         order_id = request.data.get('order_id')
+        success_url = request.data.get('success_url')
+        cancel_url = request.data.get('cancel_url')
         if not order_id:
             return Response({'error': 'Please provide an order id in the request body.'}, status=400)
         line_items = []
@@ -61,17 +63,16 @@ class CreateStripeCheckoutSessionView(viewsets.ViewSet):
             except Product.DoesNotExist:
                 return Response({'error': 'One of the products in the order does not exist. id = ' + item.product}, status=400)
         try:
-            domain_url = "http://localhost:8000" # Change to Frontend URL
             stripe.api_key = settings.STRIPE_SECRET_KEY
             checkout_session = stripe.checkout.Session.create(
-                success_url=domain_url + '/success?session_id={CHECKOUT_SESSION_ID}',
-                cancel_url=domain_url + '/cancel/',
+                success_url=success_url+'?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url=cancel_url,
                 payment_method_types=['card'],
                 mode='payment',
                 metadata={'order_id': order.id, 'user_id': request.user.id},
                 line_items=line_items
             )
-            return Response({'sessionId': checkout_session['id']})
+            return Response({'checkout_url': checkout_session['url']})
         except Exception as e:
             return Response({'error': str(e)})
         
@@ -117,6 +118,12 @@ class StripeWebhookView(viewsets.ViewSet):
                 return Response(status=400)
         return Response(status=200)
     
+client = ChargilyClient(
+                secret=settings.CHARGILY_SECRET,
+                key=settings.CHARGILY_KEY,
+                url=settings.CHARGILY_URL
+            )
+    
 class CreateChargilyCheckoutSessionView(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CreateCheckoutSessionSerializer
@@ -126,23 +133,19 @@ class CreateChargilyCheckoutSessionView(viewsets.ViewSet):
 
     def create(self, request):
         order_id = request.data.get('order_id')
+        success_url = request.data.get('success_url')
+        cancel_url = request.data.get('cancel_url')
         if not order_id:
             return Response({'error': 'Please provide an order id in the request body.'}, status=400)
         order = Order.objects.get(id=order_id)
         if order.status != 'checkout':
             return Response({'error': 'This order has already been paid for or canceled.'}, status=400)
         try:
-            domain_url = "http://localhost:8000" # Change to Frontend URL
-            client = ChargilyClient(
-                secret=settings.CHARGILY_SECRET,
-                key=settings.CHARGILY_KEY,
-                url=settings.CHARGILY_URL
-            )
             checkout = Checkout(
                 amount=int(order.total),
                 currency='dzd',
-                success_url=domain_url + '/success',
-                failure_url=domain_url + '/cancel/',
+                success_url=success_url,
+                failure_url=cancel_url,
                 #webhook_endpoint= '',
                 metadata={'order_id': order.id, 'user_id': request.user.id}
             )
@@ -150,3 +153,10 @@ class CreateChargilyCheckoutSessionView(viewsets.ViewSet):
             return Response({'checkout_url': checkout_session['checkout_url']})
         except Exception as e:
             return Response({'error': str(e)})
+        
+class ChargilyWebhookView(viewsets.ViewSet):
+    permission_classes = []
+
+    @csrf_exempt
+    def create(self, request):
+        return Response(status=200)
