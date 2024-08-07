@@ -14,7 +14,7 @@ from django_boilerplate.settings import AUTH_USER_MODEL
 from ecommerce.models import Order, Product
 from ecommerce.serializers import OrderSerializer
 from .models import ChargilyPayment, StripePayment
-from .serializers import CreateCheckoutSessionSerializer, StripePaymentSerializer
+from .serializers import ChargilyPaymentSerializer, CreateCheckoutSessionSerializer, StripePaymentSerializer
 
 class StripePaymentViewSet(viewsets.ModelViewSet):
     queryset = StripePayment.objects.all()
@@ -119,11 +119,18 @@ class StripeWebhookView(viewsets.ViewSet):
                 return Response(status=400)
         return Response(status=200)
     
-client = ChargilyClient(
+chargily_client = ChargilyClient(
                 secret=settings.CHARGILY_SECRET,
                 key=settings.CHARGILY_KEY,
                 url=settings.CHARGILY_URL
             )
+
+class ChargilyPaymentViewSet(viewsets.ModelViewSet):
+    queryset = ChargilyPayment.objects.all()
+    serializer_class = ChargilyPaymentSerializer
+    permission_classes = [permissions.IsAdminUser]
+    http_method_names = ['get']
+    
     
 class CreateChargilyCheckoutSessionView(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -150,7 +157,7 @@ class CreateChargilyCheckoutSessionView(viewsets.ViewSet):
                 webhook_endpoint= settings.BASE_URL + '/payments/chargily/webhook/',
                 metadata={'order_id': order.id, 'user_id': request.user.id}
             )
-            checkout_session = client.create_checkout(checkout)
+            checkout_session = chargily_client.create_checkout(checkout)
             return Response({'checkout_url': checkout_session['checkout_url']})
         except Exception as e:
             return Response({'error': str(e)})
@@ -165,7 +172,7 @@ class ChargilyWebhookView(viewsets.ViewSet):
         if not signature:
             return Response(status=400)
 
-        if not client.validate_signature(signature, payload):
+        if not chargily_client.validate_signature(signature, payload):
             return Response(status=403)
         
         event = json.loads(payload)
