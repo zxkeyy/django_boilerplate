@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from payments.models import StripePayment
+from payments.models import ChargilyPayment, StripePayment
 
 class CreateCheckoutSessionSerializer(serializers.Serializer):
     order_id = serializers.IntegerField()
@@ -12,3 +12,9 @@ class StripePaymentSerializer(serializers.ModelSerializer):
         model = StripePayment
         fields = ['id', 'user', 'stripe_charge_id', 'amount', 'order', 'timestamp']
         read_only_fields = ['stripe_charge_id', 'timestamp']
+
+class ChargilyPaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChargilyPayment
+        fields = ['id', 'user', 'chargily_charge_id', 'amount', 'order', 'timestamp']
+        read_only_fields = ['chargily_charge_id', 'timestamp']

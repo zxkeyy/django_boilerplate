@@ -21,7 +21,7 @@ class ProductInventoryAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['user', 'total', 'status', 'created_at', 'updated_at']
+    list_display = ['id', 'user', 'total', 'status', 'created_at', 'updated_at']
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):

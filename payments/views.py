@@ -6,6 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.views.decorators.csrf import csrf_exempt
 import stripe
+from chargily_pay import ChargilyClient
+from chargily_pay.entity import Checkout
 
 from django_boilerplate.settings import AUTH_USER_MODEL
 from ecommerce.models import Order, Product
@@ -26,8 +28,8 @@ class StripeConfigView(viewsets.ViewSet):
         stripe_config = {'publicKey': settings.STRIPE_PUBLISHABLE_KEY}
         return Response(stripe_config)
 
-# Create your views here.
-class CreateCheckoutSessionView(viewsets.ViewSet):
+
+class CreateStripeCheckoutSessionView(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CreateCheckoutSessionSerializer
 
@@ -114,3 +116,37 @@ class StripeWebhookView(viewsets.ViewSet):
                 print(str(e))
                 return Response(status=400)
         return Response(status=200)
+    
+class CreateChargilyCheckoutSessionView(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CreateCheckoutSessionSerializer
+
+    def list(self, request):
+        return Response({'error': 'Please provide an order id in the request body.'}, status=400)
+
+    def create(self, request):
+        order_id = request.data.get('order_id')
+        if not order_id:
+            return Response({'error': 'Please provide an order id in the request body.'}, status=400)
+        order = Order.objects.get(id=order_id)
+        if order.status != 'checkout':
+            return Response({'error': 'This order has already been paid for or canceled.'}, status=400)
+        try:
+            domain_url = "http://localhost:8000" # Change to Frontend URL
+            client = ChargilyClient(
+                secret=settings.CHARGILY_SECRET,
+                key=settings.CHARGILY_KEY,
+                url=settings.CHARGILY_URL
+            )
+            checkout = Checkout(
+                amount=int(order.total),
+                currency='dzd',
+                success_url=domain_url + '/success',
+                failure_url=domain_url + '/cancel/',
+                #webhook_endpoint= '',
+                metadata={'order_id': order.id, 'user_id': request.user.id}
+            )
+            checkout_session = client.create_checkout(checkout)
+            return Response({'checkout_url': checkout_session['checkout_url']})
+        except Exception as e:
+            return Response({'error': str(e)})
