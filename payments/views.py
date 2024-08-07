@@ -1,3 +1,4 @@
+import json
 from django.conf import settings
 from django.http import JsonResponse
 from django.contrib.auth import get_user_model
@@ -12,7 +13,7 @@ from chargily_pay.entity import Checkout
 from django_boilerplate.settings import AUTH_USER_MODEL
 from ecommerce.models import Order, Product
 from ecommerce.serializers import OrderSerializer
-from .models import StripePayment
+from .models import ChargilyPayment, StripePayment
 from .serializers import CreateCheckoutSessionSerializer, StripePaymentSerializer
 
 class StripePaymentViewSet(viewsets.ModelViewSet):
@@ -103,6 +104,9 @@ class StripeWebhookView(viewsets.ViewSet):
                 session = event['data']['object']
                 user = session['metadata']['user_id']
                 order_id = session['metadata']['order_id']
+                order = Order.objects.get(id=order_id)
+                order.status = 'pending'
+                order.save()
                 stripePayment = StripePayment.objects.create(
                     user= get_user_model().objects.get(id=user),
                     stripe_charge_id=session['payment_intent'],
@@ -110,9 +114,6 @@ class StripeWebhookView(viewsets.ViewSet):
                     order_id=order_id
                 )
                 stripePayment.save()
-                order = Order.objects.get(id=order_id)
-                order.status = 'pending'
-                order.save()
             except Exception as e:
                 print(str(e))
                 return Response(status=400)
@@ -146,7 +147,7 @@ class CreateChargilyCheckoutSessionView(viewsets.ViewSet):
                 currency='dzd',
                 success_url=success_url,
                 failure_url=cancel_url,
-                #webhook_endpoint= '',
+                webhook_endpoint= settings.BASE_URL + '/payments/chargily/webhook/',
                 metadata={'order_id': order.id, 'user_id': request.user.id}
             )
             checkout_session = client.create_checkout(checkout)
@@ -159,4 +160,35 @@ class ChargilyWebhookView(viewsets.ViewSet):
 
     @csrf_exempt
     def create(self, request):
+        signature = request.headers.get("signature")
+        payload = request.body.decode("utf-8")
+        if not signature:
+            return Response(status=400)
+
+        if not client.validate_signature(signature, payload):
+            return Response(status=403)
+        
+        event = json.loads(payload)
+
+        
+        checkout_status = event["type"]
+        
+        if checkout_status == "checkout.paid":
+            try:
+                data = event['data']
+                user = data['metadata']['user_id']
+                order_id = data['metadata']['order_id']
+                order = Order.objects.get(id=order_id)
+                order.status = 'pending'
+                order.save()
+                chargilyPayment = ChargilyPayment.objects.create(
+                    user= get_user_model().objects.get(id=user),
+                    chargily_charge_id=data['id'],
+                    amount=data['amount'],
+                    order_id=order_id
+                )
+                chargilyPayment.save()
+            except Exception as e:
+                print(str(e))
+                return Response(status=400)
         return Response(status=200)
